@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="az"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Səs mesajı yaz</title>
+<style>*{box-sizing:border-box}body{font-family:system-ui,Arial;background:#f3f6fb;color:#172b4d;margin:0;padding:24px}.card{max-width:560px;margin:7vh auto;background:white;border-radius:16px;padding:26px;box-shadow:0 8px 30px #172b4d15}button,a.button{background:#1769aa;color:white;border:0;border-radius:9px;padding:12px 17px;font:inherit;cursor:pointer;margin:5px 6px 5px 0;display:inline-block;text-decoration:none}button:disabled{opacity:.5}#stop{background:#b42318}p{line-height:1.55}audio{width:100%;margin:16px 0}.muted{color:#64748b}.err{color:#b42318}</style></head>
+<body><div class="card"><h1>🎙 Səs mesajı yaz</h1><p class="muted">Bu səhifə ayrıca HTTPS ünvanında açıldığı üçün Chrome mikrofon icazəsi istəyə bilər. Yazı cihazınızda hazırlanır, heç bir serverə göndərilmir.</p><button id="start">● Səs yaz</button><button id="stop" disabled>■ Dayandır</button><p id="status" role="status">Hazırdır.</p><audio id="preview" controls hidden></audio><a id="download" class="button" hidden>Səsi endir</a><p class="muted">Endirdiyiniz WEBM faylını Əməkhaqqı köməkçisi tətbiqində “Səs faylını seç” hissəsindən əlavə edin. Maksimum 5 MB.</p></div>
+<script>
+const start=document.getElementById('start'),stop=document.getElementById('stop'),status=document.getElementById('status'),preview=document.getElementById('preview'),download=document.getElementById('download');
+let recorder,stream,parts=[],url=null,interval=null;
+start.onclick=async()=>{start.disabled=true;status.className='';status.textContent='Mikrofon icazəsi gözlənilir...';try{
+if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder)throw Error('Bu brauzer səs yazmağı dəstəkləmir.');
+stream=await navigator.mediaDevices.getUserMedia({audio:true});
+const mime=['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg'].find(x=>MediaRecorder.isTypeSupported(x))||'';
+recorder=new MediaRecorder(stream,mime?{mimeType:mime}:undefined);parts=[];let seconds=0;
+recorder.ondataavailable=e=>{if(e.data.size)parts.push(e.data)};
+recorder.onstop=()=>{clearInterval(interval);stream.getTracks().forEach(t=>t.stop());stop.disabled=true;start.disabled=false;const blob=new Blob(parts,{type:recorder.mimeType});if(url)URL.revokeObjectURL(url);if(!blob.size){status.textContent='Səs yazılmadı.';return;}if(blob.size>5*1024*1024){status.textContent='Fayl 5 MB-dan böyükdür. Daha qısa yazın.';return;}url=URL.createObjectURL(blob);preview.src=url;preview.hidden=false;const ext=recorder.mimeType.includes('mp4')?'mp4':recorder.mimeType.includes('ogg')?'ogg':'webm';download.href=url;download.download='ses_mesaji_'+Date.now()+'.'+ext;download.hidden=false;status.textContent='Hazırdır. Səsi dinləyib endirin.';};
+recorder.start();stop.disabled=false;status.textContent='Yazılır...';interval=setInterval(()=>{seconds++;status.textContent='Yazılır: '+seconds+' saniyə';if(seconds>=180&&recorder.state==='recording')recorder.stop()},1000);
+}catch(e){start.disabled=false;status.className='err';status.textContent=(e.name==='NotAllowedError'?'Mikrofon icazəsi rədd edildi. Ünvan sətrinin yanından mikrofon üçün Allow seçin.':'Mikrofon açılmadı: '+(e.message||e.name));}};
+stop.onclick=()=>{if(recorder?.state==='recording')recorder.stop()};
+</script></body></html>
